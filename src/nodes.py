@@ -49,7 +49,18 @@ def route_next(state: State) -> str:
 
 def _tavily_search(query: str, max_results: int = 5) -> List[dict]:
     tool = TavilySearch(max_results=max_results)
-    return tool.invoke({"query": query}) or []
+    try:
+        response = tool.invoke({"query": query})
+        # If it returns a dict with 'results', return that list
+        if isinstance(response, dict) and "results" in response:
+            return response["results"]
+        # If it returns a list directly (some versions/configs), return it
+        if isinstance(response, list):
+            return response
+        return []
+    except Exception as e:
+        print(f"Error in Tavily search: {e}")
+        return []
 
 
 def research_node(state: State) -> dict:
