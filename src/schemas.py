@@ -15,9 +15,9 @@ class Task(BaseModel):
 
     bullets: List[str] = Field(
         ...,
-        min_length=3,
+        min_length=1,
         max_length=6,
-        description="3–6 concrete, non-overlapping subpoints to cover.",
+        description="1–6 concrete, non-overlapping subpoints to cover.",
     )
 
     target_words: int = Field(..., description="Target word count (150–450).")

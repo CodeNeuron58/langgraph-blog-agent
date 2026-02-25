@@ -47,43 +47,50 @@ def route_next(state: State) -> str:
     return "research" if state["needs_research"] else "orchestrator"
 
 
-def _tavily_search(query: str, max_results: int = 5) -> List[dict]:
+def _tavily_search(query: str, max_results: int = 5) -> List[Dict[str, Any]]:
     tool = TavilySearch(max_results=max_results)
-    try:
-        response = tool.invoke({"query": query})
-        # If it returns a dict with 'results', return that list
-        if isinstance(response, dict) and "results" in response:
-            return response["results"]
-        # If it returns a list directly (some versions/configs), return it
-        if isinstance(response, list):
-            return response
+    # Fix 1: Pass query string directly, not a dict
+    result = tool.invoke(query)
+    # Fix 2: Tavily returns a dict with 'results' key, not a list directly
+    # Also handle the case where result might be None or empty
+    if not result:
         return []
-    except Exception as e:
-        print(f"Error in Tavily search: {e}")
-        return []
+    # Fix 3: Extract the actual results list from the response object
+    # TavilySearch returns an object with .results or dict with 'results'
+    if hasattr(result, 'results'):
+        return result.results
+    elif isinstance(result, dict):
+        return result.get('results', [])
+    return []
 
 
 def research_node(state: State) -> dict:
-
     raw_results = []
+    # Limit to 8 queries as intended
     for q in state.get("queries", [])[:8]:
-        raw_results.extend(_tavily_search(q, max_results=6))
+        results = _tavily_search(q, max_results=6)
+        raw_results.extend(results)
 
     if not raw_results:
         return {"evidence": []}
+
+    # Fix 4: Ensure raw_results is properly serialized for the LLM
+    import json
+    results_text = json.dumps(raw_results, indent=2, default=str)
 
     extractor = llm.with_structured_output(EvidencePack)
 
     pack = extractor.invoke(
         [
             SystemMessage(content=RESEARCH_SYSTEM),
-            HumanMessage(content=f"Raw results:\n{raw_results}"),
+            HumanMessage(content=f"Raw results:\n{results_text}"),
         ]
     )
 
+    # Deduplication logic (unchanged, looks correct)
     dedup = {}
     for e in pack.evidence:
-        if e.url:
+        if e.url and e.url.startswith(('http://', 'https://')):  # Fix 5: Validate URL format
             dedup[e.url] = e
 
     return {"evidence": list(dedup.values())}
