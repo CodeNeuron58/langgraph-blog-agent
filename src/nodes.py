@@ -170,7 +170,18 @@ def reducer_node(state: State) -> dict:
     ]
 
     body = "\n\n".join(ordered_sections).strip()
-    final_md = f"# {plan.blog_title}\n\n{body}\n"
+    
+    unique_tags = sorted(list(set([tag for task in plan.tasks for tag in task.tags])))
+    tags_str = ", ".join(unique_tags) if unique_tags else "None"
+    
+    final_md = (
+        f"# {plan.blog_title}\n\n"
+        f"*Target Audience: {plan.audience} | Scope: {plan.blog_kind.replace('_', ' ').title()}*\n\n"
+        f"---\n\n"
+        f"{body}\n\n"
+        f"---\n\n"
+        f"**Tags:** {tags_str}\n"
+    )
 
     filename = f"generated_blogs/{plan.blog_title.replace(' ', '_')}.md"
     Path(filename).write_text(final_md, encoding="utf-8")

@@ -32,7 +32,13 @@ class Plan(BaseModel):
     audience: str
     tone: str
     blog_kind: Literal["explainer", "tutorial", "news_roundup", "comparison", "system_design"] = "explainer"
-    constraints: List[str] = Field(default_factory=list)
+    constraints: List[str] = Field(
+        default_factory=lambda: [
+            "Write in an engaging, professional Medium-style tone",
+            "Include a strong Hook introduction and a Takeaways conclusion",
+            "Use bullet points, bolding, and short paragraphs for readability"
+        ]
+    )
     tasks: List[Task]
 
 class EvidenceItem(BaseModel):
